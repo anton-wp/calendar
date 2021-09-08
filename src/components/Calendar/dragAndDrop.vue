@@ -10,7 +10,7 @@
       item-key="id">
       <template #item="{element}">
         <ActiveCard v-if="element.days" :element="element" />
-        <EmptyCard v-else :element="element" />
+        <EmptyCard v-else :element="element" :row="item.id - 1" />
       </template>
     </draggable>
   </div>
@@ -65,13 +65,15 @@ export default {
       return false
     },
     dragEnd(e){
+      e.item.classList.remove("dragg-block")
       if(!this.element) return
       let IdKey = this.idKey
       let emptyArr = [];
       for(let i = 0; i < this.element.days; i++){
         IdKey++
         emptyArr.push({
-          id: IdKey, row: this.element.row
+          id: IdKey, 
+          row: this.element.row,
         })
       }
       let index = 0
@@ -108,7 +110,6 @@ export default {
       this.clearDrag()
     },
     dragStart(e){
-      console.log(e);
       e.item.classList.add("dragg-block")
     }
   }

@@ -1,7 +1,7 @@
 <template>
   <div>
     <Filter @updateFilter="updateFilter"/> 
-    <div class="calendar" v-click-outside="onClickOutsideCalendar" @scroll="closeModal()">
+    <div class="calendar" @scroll="closeModal()">
       <div class="calendar-leftHeader">
         <div class="leftHeader-block" v-for="(item, key) in countDay + 1" :key="key">
           <template v-if="key === 0">
@@ -12,7 +12,12 @@
           </template>
         </div>
       </div>
-      <div class="calendar-rooms" :style="`height: ${(countDay + 2) * 50}px`" @click="click">
+      <div 
+        class="calendar-rooms" 
+        :style="`height: ${(countDay + 2) * 50}px`" 
+        @click="click"
+        v-click-outside="onClickOutsideCalendar"
+      >
         <RecycleScroller
           @scroll="closeModal()"
           class="scroller"
@@ -23,11 +28,27 @@
           :buffer="200"
           v-slot="{ item }"
         >
-          <DragAndDrop :item="item" :idKey="idKey" :calendar="calendar" @updateIdKey="updateIdKey" @updateRowCalendar="updateRowCalendar" />
+          <DragAndDrop 
+            :item="item" 
+            :idKey="idKey" 
+            :calendar="calendar" 
+            @updateIdKey="updateIdKey" 
+            @updateRowCalendar="updateRowCalendar" 
+          />
         </RecycleScroller>
       </div>
-      <Dropdown v-if="openModal" :modalY="modalY" :modalX="modalX" @openDialog="dialogVisible = true"/>
-      <Dialog :dialogVisible="dialogVisible" @close="dialogVisible = false"/>
+      <Dropdown 
+        v-if="openModal" 
+        :modalY="modalY" 
+        :modalX="modalX" 
+        @openDialog="dialogVisible = true" 
+      />
+      <Dialog 
+        :dialogVisible="dialogVisible" 
+        :calendar="calendar"
+        :row="activeRow"
+        @close="dialogVisible = false"
+      />
     </div>
   </div>
 </template>
@@ -59,6 +80,7 @@ export default {
     modalX: 0,
     modalY: 0,
     id: null,
+    activeRow: null,
     idKey: null,
     dialogVisible: false,
   }),
@@ -86,18 +108,24 @@ export default {
       let arrRooms = [];
       for(let i = 1; i < this.countRooms; i++){
         let arrDays = [];
+        let day = 1
         for(let j = 1; j < this.countDay - 4; j++){
           id++
           if(j === 3){
             arrDays.push({id, days: 2, row: i})
+            day = day + 2
           }else if(j === 2){
             arrDays.push({id, days: 4, row: i})
+            day = day + 4
           }else if(j === 1){
             arrDays.push({id, days: 1, row: i})
+            day = day + 1
           }else if(j === 5){
             arrDays.push({id, days: 2, row: i})
+            day = day + 2
           }else {
-            arrDays.push({id, row: i})
+            arrDays.push({id, row: i, day})
+            day++
           }
         }
         arrRooms.push({id: i, items: arrDays})
@@ -107,7 +135,11 @@ export default {
       this.idKey = id
     },
     click(e){
-      if(!e.toElement.children[0]) return
+      if(e.toElement.className !== 'click-block'){
+        this.closeModal()
+        return
+      }
+      const row = e.toElement.children[0].dataset.row
       const id = e.toElement.children[0].id
       const x = e.toElement.children[0].getBoundingClientRect().x
       const y = e.toElement.children[0].getBoundingClientRect().y
@@ -116,6 +148,7 @@ export default {
       }else{
         this.openModal = true
         this.id = id
+        this.activeRow = row
         this.modalX = x
         this.modalY = y
       }
@@ -125,7 +158,8 @@ export default {
     },
     closeModal(){
       this.openModal = false
-      this.id = null
+      // this.id = null
+      // this.activeRow = null
       this.modalX = 0
       this.modalY = 0
     },
@@ -137,7 +171,8 @@ export default {
 }
 </script>
 <style lang="scss">
-$colorBorder: #767676;
+$colorBorder:  #DBE5EF;
+$backgroundCalendar: #F1F7FC;
 
 
 .filter{
@@ -152,15 +187,15 @@ $colorBorder: #767676;
   &-leftHeader{
     width: auto;
     height: 100%;
-    background: #F1F7FC;
+    background: $backgroundCalendar;
   }
   .calendar-rooms{
     max-width: calc(100% - 120px);
     display: flex;
-    background: #F1F7FC;
+    background: $backgroundCalendar;
     &__column{
-      border-right: 1px solid #DBE5EF;
-      border-left: 1px solid #DBE5EF;
+      border-right: 1px solid $colorBorder;
+      border-left: 1px solid $colorBorder;
       .column-header-block{
         display: flex;
         justify-content: center;
@@ -177,11 +212,17 @@ $colorBorder: #767676;
         justify-content: center;
         align-items: center;
         &.dragg-block{
-          border: 1px dashed red;
+          .block-room__card{
+            border: 1px dashed #3E79B9;
+            background: #DFEDFA;
+          }
+          .block-room-content{
+            display: none;
+          }
         }
         &.empty-block{
-          border-top: 1px solid #DBE5EF;
-          border-bottom: 1px solid #DBE5EF;
+          border-top: 1px solid $colorBorder;
+          border-bottom: 1px solid $colorBorder;
         }
         &__card{
           display: flex;
