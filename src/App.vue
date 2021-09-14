@@ -1,16 +1,17 @@
 <template>
   <div>
-    <Calendar />
+    <DefaultLayout />
+    <router-view />
   </div>
 </template>
 
 <script>
-import Calendar from './components/Calendar/index.vue'
+import DefaultLayout from './layouts/default.vue'
 
 export default {
   name: 'App',
   components: {
-    Calendar,
+    DefaultLayout,
   }
 }
 </script>
