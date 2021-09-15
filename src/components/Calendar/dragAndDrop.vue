@@ -1,6 +1,6 @@
 <template>
   <div class="calendar-rooms__column">
-    <span class="column-header-block">{{item.id}} room</span>
+    <span class="column-header-block">{{item.name}}</span>
     <draggable 
       v-model="item.items" 
       group="list" 
@@ -48,62 +48,79 @@ export default {
       const listRelated = e.relatedContext.list
       const element = e.draggedContext.element
       const indexRow = e.draggedContext.index
+      const newRow = listRelated[0].row
       // если перетягуемый блок карточка
       if(!element.days) return false
       // только на пустые блоки
       const toArr = listRelated.slice(indexRelated, indexRelated + element.days)
       const found = toArr.some((el) => el.days);
-      if(found) return false
+      // if(newRow !== element.row){
+        if(found) return false
+      // }
       // если перетягиваем на карточку
       if(listRelated[indexRelated].days){
         return false
       }
       this.element = element;
-      this.newRow = listRelated[0].row
+      this.newRow = newRow
       this.drContext = draggetContext
       this.futureIndex = indexRelated
       return false
+    },
+    getDay(newIndex, newRow){
+      if(newIndex === 0){
+        return 1  
+      }else if(newIndex < newRow.length - 1 && newRow[newIndex - 1].dayStart){
+        return newRow[newIndex - 1].dayStart + newRow[newIndex - 1].days;
+      }else if(newIndex < newRow.length - 1 && newRow[newIndex - 1].day){
+        return newRow[newIndex - 1].day + 1;
+      }
     },
     dragEnd(e){
       e.item.classList.remove("dragg-block")
       if(!this.element) return
       let IdKey = this.idKey
+      let newRow = this.calendar[this.newRow].items
       let emptyArr = [];
       for(let i = 0; i < this.element.days; i++){
         IdKey++
+        const day = this.getDay(this.drContext.index, newRow)
         emptyArr.push({
           id: IdKey, 
           row: this.element.row,
+          day: day + i 
         })
       }
       let index = 0
       if(this.element.row === this.newRow){
         if(this.drContext.index < this.futureIndex)
-        index = this.element.days - 1
+          index = this.element.days - 1
       }
 
-
-      const oldRow = this.calendar[this.element.row - 1].items
+      const oldRow = this.calendar[this.element.row].items
 
       this.$emit('updateRowCalendar', {
-        index: this.element.row - 1,
+        index: this.element.row,
         items: [
         ...oldRow.slice(0, this.drContext.index), 
         ...emptyArr, 
         ...oldRow.slice(this.drContext.index + 1)
         ]
       })
+      
       IdKey++
+      const newIndex = this.futureIndex + index
       this.element.row = this.newRow
       this.element.id = IdKey
-      const newRow = this.calendar[this.newRow - 1].items
+      newRow = this.calendar[this.newRow].items
+      this.element.dayStart = this.getDay(newIndex, newRow) 
 
       this.$emit('updateRowCalendar', {
-        index: this.element.row - 1,
+        index: this.element.row,
         items: [
-        ...newRow.slice(0, this.futureIndex + index), 
+        ...newRow.slice(0, newIndex), 
         this.element, 
-        ...newRow.slice(this.futureIndex + index + this.element.days)
+        ...newRow.slice(newIndex + this.element.days)
         ]
       })
       this.$emit('updateIdKey', IdKey)

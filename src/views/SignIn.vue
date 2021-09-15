@@ -1,26 +1,28 @@
 <template>
-  <div @click="login">
-    login
-  </div>
+  <el-button type="primary" @click="login">login with google</el-button>
 </template>
 
 <script>
-// import firebase from 'firebase'
+import firebase from 'firebase'
+import { ElButton } from 'element-plus'
 
 export default {
+  components: {
+    ElButton
+  },
   methods: {
     login() {
-    //   firebase
-    //     .auth() // get the auth api
-    //     .GoogleAuthProvider()
-    //     .then((data) => {
-    //       console.log('Successfully registered!');
-    //       router.push('/feed') // redirect to the feed
-    //     })
-    //     .catch(error => {
-    //       console.log(error.code)
-    //       alert(error.message);
-    //     });
+      let provider = new firebase.auth.GoogleAuthProvider();
+
+      firebase
+        .auth() // get the auth api
+        .signInWithPopup(provider)
+        .then((data) => {
+          this.$router.push({name: 'home'})
+        })
+        .catch(error => {
+          console.log(error.code)
+        });
     }
   }
 }

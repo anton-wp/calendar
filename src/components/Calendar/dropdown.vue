@@ -3,7 +3,7 @@
     <el-col :span="24">
       <el-card shadow="always"> 
         <span @click="$emit('openDialog')">Добавить</span>
-        <span>Удалить</span>
+        <!-- <span>Удалить</span> -->
       </el-card>
     </el-col>
   </div>

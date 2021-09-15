@@ -4,8 +4,7 @@
     <div class="calendar" @scroll="closeModal()">
       <div class="calendar-leftHeader">
         <div class="leftHeader-block" v-for="(item, key) in countDay + 1" :key="key">
-          <template v-if="key === 0">
-            
+          <template v-if="key === 0"> 
           </template>
           <template v-else>
             {{item - 1 + '.' + mouth}}
@@ -43,10 +42,13 @@
         :modalX="modalX" 
         @openDialog="dialogVisible = true" 
       />
-      <Dialog 
+      <Dialog
+        v-if="calendar && id" 
         :dialogVisible="dialogVisible" 
         :calendar="calendar"
         :row="activeRow"
+        :idKey="idKey"
+        @updateRowCalendar="updateRowCalendar"
         @close="dialogVisible = false"
       />
     </div>
@@ -54,6 +56,7 @@
 </template>
 <script>
 import moment from 'moment';
+import { firestore } from '@/firebase.js'
 import { RecycleScroller } from 'vue-virtual-scroller'
 import vClickOutside from 'click-outside-vue3'
 import Dialog from "@/components/Calendar/dialog.vue"
@@ -74,7 +77,6 @@ export default {
   },
   data: () => ({
     date: new Date,
-    countRooms: 1000,
     calendar: [],
     openModal: false,
     modalX: 0,
@@ -83,6 +85,7 @@ export default {
     activeRow: null,
     idKey: null,
     dialogVisible: false,
+    rooms: null
   }),
   computed: {
     mouth(){
@@ -101,34 +104,48 @@ export default {
       this.idKey = id
     },
     updateRowCalendar({index, items}){
+      const cards = {}
+      items.filter(item => item.dayStart).map(item => {
+        cards[item.dayStart] = {
+          client: item.client,
+          finish: item.dayStart + item.days - 1 
+        }
+      })
+
+      const tutorialsRef = firestore.collection("calendar").doc('09.21').update({
+        [this.calendar[index].name]: {
+          days: cards 
+        }
+      });
       this.calendar[index].items = items
     },
-    genereteArr(){
+    async getCalendar(){
+      const tutorialsRef = await firestore.collection("calendar").doc('09.21').get();
+      if (!tutorialsRef.exists) return
+      return tutorialsRef.data();
+    },
+    async genereteArr(){
+      this.rooms = await this.getCalendar()
+      const roomsKeys = Object.keys(this.rooms)
       let id = 0;
       let arrRooms = [];
-      for(let i = 1; i < this.countRooms; i++){
+      for(let i = 0; i < roomsKeys.length; i++){
         let arrDays = [];
         let day = 1
-        for(let j = 1; j < this.countDay - 4; j++){
+        for(let j = 1; j < this.countDay + 1; j++){
           id++
-          if(j === 3){
-            arrDays.push({id, days: 2, row: i})
-            day = day + 2
-          }else if(j === 2){
-            arrDays.push({id, days: 4, row: i})
-            day = day + 4
-          }else if(j === 1){
-            arrDays.push({id, days: 1, row: i})
-            day = day + 1
-          }else if(j === 5){
-            arrDays.push({id, days: 2, row: i})
-            day = day + 2
+          const item = this.rooms[roomsKeys[i]].days[j]
+          if(item){
+            const dayActive = item.finish - j + 1
+            arrDays.push({id, days: dayActive, row: i, dayStart: day, client: item.client})
+            j = j + dayActive - 1
+            day = day + dayActive
           }else {
             arrDays.push({id, row: i, day})
             day++
           }
         }
-        arrRooms.push({id: i, items: arrDays})
+        arrRooms.push({id: i, name: roomsKeys[i] , items: arrDays})
         arrDays = []
       }
       this.calendar = arrRooms
@@ -143,12 +160,12 @@ export default {
       const id = e.toElement.children[0].id
       const x = e.toElement.children[0].getBoundingClientRect().x
       const y = e.toElement.children[0].getBoundingClientRect().y
-      if(id === this.id){
+      if(id === this.id && this.openModal){
         this.closeModal()
       }else{
         this.openModal = true
         this.id = id
-        this.activeRow = row
+        this.activeRow = Number(row) + 1
         this.modalX = x
         this.modalY = y
       }
@@ -158,8 +175,6 @@ export default {
     },
     closeModal(){
       this.openModal = false
-      // this.id = null
-      // this.activeRow = null
       this.modalX = 0
       this.modalY = 0
     },
@@ -177,13 +192,52 @@ $backgroundCalendar: #F1F7FC;
 
 .filter{
   display: flex;
+  flex-direction: column;
   margin: 20px;
+  .demo-input-label{
+    font-size: 12px;
+  }
+  .el-input{
+    width: 300px;
+  }
+  .filter-room{
+    display: flex;
+    &-input{
+      display: flex;
+      flex-direction: column;
+      margin-top: 10px;
+    }
+    .el-button{
+      max-height: 40px;
+      margin-top: auto;
+      margin-left: 10px;
+    }
+  }
+}
+.error{
+  &.el-input{
+    input{
+      border: 1px solid red;
+    }
+  }
 }
 .calendar{
   margin: 20px;
   display: flex;
   overflow-y: auto;
   max-height: 700px;
+  .el-dialog__body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    .el-input{
+      margin: 5px 0;
+      width: 100%;
+    }
+    .demo-input-label{
+      margin-right: auto;
+    }
+  }
   &-leftHeader{
     width: auto;
     height: 100%;
