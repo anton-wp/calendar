@@ -1,6 +1,13 @@
 <template>
   <div>
-    <Filter @updateFilter="updateFilter"/> 
+    <Filter 
+      :calendar="calendar"
+      :countDay="countDay"
+      :idKey="idKey"
+      @updateIdKey="updateIdKey" 
+      @updateFilter="updateFilter" 
+      @updateRowCalendar="updateRowCalendar" 
+    /> 
     <div class="calendar" @scroll="closeModal()">
       <div class="calendar-leftHeader">
         <div class="leftHeader-block" v-for="(item, key) in countDay + 1" :key="key">
@@ -48,6 +55,7 @@
         :calendar="calendar"
         :row="activeRow"
         :idKey="idKey"
+        @updateIdKey="updateIdKey" 
         @updateRowCalendar="updateRowCalendar"
         @close="dialogVisible = false"
       />
@@ -103,7 +111,17 @@ export default {
     updateIdKey(id){
       this.idKey = id
     },
-    updateRowCalendar({index, items}){
+    async updateRowCalendar({index, items, name}){
+      if(name) {
+        this.calendar =[
+          ...this.calendar,
+          {
+            name,
+            items: [],
+            id: this.calendar.length
+          } 
+        ] 
+      }
       const cards = {}
       items.filter(item => item.dayStart).map(item => {
         cards[item.dayStart] = {
@@ -112,20 +130,24 @@ export default {
         }
       })
 
-      const tutorialsRef = firestore.collection("calendar").doc('09.21').update({
+      this.calendar[index].items = items
+      const tutorialsRef = await firestore.collection("calendar").doc(moment(this.date).format("MM.YY")).update({
         [this.calendar[index].name]: {
           days: cards 
         }
       });
-      this.calendar[index].items = items
     },
     async getCalendar(){
-      const tutorialsRef = await firestore.collection("calendar").doc('09.21').get();
-      if (!tutorialsRef.exists) return
+      const tutorialsRef = await firestore.collection("calendar").doc(moment(this.date).format("MM.YY")).get();
+      if (!tutorialsRef.exists) return null
       return tutorialsRef.data();
     },
     async genereteArr(){
       this.rooms = await this.getCalendar()
+      if(!this.rooms){
+        this.calendar = []
+        return
+      }
       const roomsKeys = Object.keys(this.rooms)
       let id = 0;
       let arrRooms = [];
@@ -190,6 +212,7 @@ $colorBorder:  #DBE5EF;
 $backgroundCalendar: #F1F7FC;
 
 
+
 .filter{
   display: flex;
   flex-direction: column;
@@ -251,6 +274,7 @@ $backgroundCalendar: #F1F7FC;
       border-right: 1px solid $colorBorder;
       border-left: 1px solid $colorBorder;
       .column-header-block{
+        margin-bottom: 25px;
         display: flex;
         justify-content: center;
         align-items: center;

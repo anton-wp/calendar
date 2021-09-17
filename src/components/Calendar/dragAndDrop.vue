@@ -28,6 +28,7 @@ export default {
     draggable
   },
   props: ['item', 'idKey', 'calendar'],
+  emits: ["updateRowCalendar", "updateIdKey"],
   data: () => ({
     element: null,
     newRow: null,
@@ -54,9 +55,9 @@ export default {
       // только на пустые блоки
       const toArr = listRelated.slice(indexRelated, indexRelated + element.days)
       const found = toArr.some((el) => el.days);
-      // if(newRow !== element.row){
-        if(found) return false
-      // }
+      if(found) return false
+      // проверка по нижней границе
+      if(element.days > toArr.length) return false
       // если перетягиваем на карточку
       if(listRelated[indexRelated].days){
         return false
@@ -76,7 +77,7 @@ export default {
         return newRow[newIndex - 1].day + 1;
       }
     },
-    dragEnd(e){
+    async dragEnd(e){
       e.item.classList.remove("dragg-block")
       if(!this.element) return
       let IdKey = this.idKey

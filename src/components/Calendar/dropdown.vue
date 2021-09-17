@@ -17,6 +17,7 @@ export default {
     ElCol,
     ElCard
   },
-  props: ['modalY', 'modalX']
+  props: ['modalY', 'modalX'],
+  emits: ["openDialog"],
 }
 </script>

@@ -45,7 +45,7 @@ export default {
     ElButton
   },
   props: ["dialogVisible", "calendar", "row", "idKey"],
-  emits: ["updateRowCalendar"],
+  emits: ["updateRowCalendar", "close", "updateIdKey"],
   data: () => ({
     dateStart: null,
     dateEnd: null,

@@ -1,6 +1,6 @@
 <template>
   <div class="filter">
-    <el-date-picker v-model="date" @change="changeDate" type="month" placeholder="Выберете дату">
+    <el-date-picker v-model="date" @change="changeDate" :clearable="false" type="month" placeholder="Выберете дату">
     </el-date-picker>
     <div class="filter-room">
       <div class="filter-room-input">
@@ -13,6 +13,7 @@
 </template>
 
 <script>
+import moment from 'moment';
 import { ElDatePicker, ElButton} from 'element-plus'
 import { firestore } from '@/firebase.js'
 
@@ -21,6 +22,8 @@ export default {
     ElDatePicker,
     ElButton,
   },
+  props: ['calendar', 'idKey', 'countDay'],
+  emits: ["updateIdKey", "updateFilter", "updateRowCalendar"],
   data: () => ({
     date: new Date,
     roomName: null,
@@ -29,6 +32,18 @@ export default {
   computed: {
     validRoomName(){
       return this.click && !this.roomName
+    },
+    emptyRow() {
+      let arrDays = [];
+      let id = this.idKey
+      let day = 1
+      for(let j = 1; j < this.countDay + 1; j++){
+        id++
+        arrDays.push({id, row: this.calendar.length, day})
+        day++
+      }
+      this.$emit('updateIdKey', id)
+      return arrDays
     }
   },
   methods: {
@@ -38,11 +53,11 @@ export default {
     async addRoom(){
       this.click = true
       if(this.validRoomName) return
-      await firestore.collection("calendar").doc('09.21').update({
-        [this.roomName]: {
-          days: [] 
-        }
-      });
+      this.$emit('updateRowCalendar', {
+        index: this.calendar.length,
+        items: this.emptyRow,
+        name: this.roomName,
+      })
       this.click = false
       this.roomName = null
     }
