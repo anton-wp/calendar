@@ -36,6 +36,22 @@
             @updateVisit="updateVisit"
           />
         </RecycleScroller>
+        <!-- <div
+          @scroll="closeModal()"
+          class="scroller"
+          direction="horizontal"
+          key-field="id"
+          v-for="item in rooms"
+          :key="item.id"
+          :item-size="200"
+          :buffer="200"
+        >
+          <DragAndDrop 
+            :item="visits[item.id]" 
+            :name="item.name"
+            @updateVisit="updateVisit"
+          />
+        </div> -->
       </div>
       <Dropdown 
         v-if="openModal" 

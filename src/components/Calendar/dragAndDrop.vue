@@ -47,7 +47,7 @@ export default {
       const element = e.draggedContext.element
       const newRow = listRelated[0].roomId
       // если перетягуемый блок карточка
-      if(!element.length) return false
+      if(!element.start) return false
       // только на пустые блоки
       const toArr = listRelated.slice(indexRelated, indexRelated + element.length)
       const found = toArr.some((el) => el.length);
@@ -64,6 +64,7 @@ export default {
       return false
     },
     async dragEnd(e){
+      if(!this.element) return
       e.item.classList.remove("dragg-block")
 
       await updateVisit({...this.element, roomId: this.newRow })
