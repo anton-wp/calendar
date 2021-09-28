@@ -27,6 +27,7 @@
   </div>
 </template>
 <script>
+import { inject } from 'vue'
 export default {
   props: ['row'],
   computed: {
@@ -39,6 +40,6 @@ export default {
       if(this.row.score > 50) return "success"
       else return "danger"
     }
-  }
+  },
 }
 </script>

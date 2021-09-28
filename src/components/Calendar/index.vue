@@ -1,12 +1,8 @@
 <template>
   <div>
     <Filter 
-      :calendar="calendar"
-      :countDay="countDay"
-      :idKey="idKey"
-      @updateIdKey="updateIdKey" 
       @updateFilter="updateFilter" 
-      @updateRowCalendar="updateRowCalendar" 
+      @getRooms="getRooms"
     /> 
     <div class="calendar" @scroll="closeModal()">
       <div class="calendar-leftHeader">
@@ -29,17 +25,18 @@
           class="scroller"
           direction="horizontal"
           key-field="id"
-          :items="calendar"
+          :items="rooms"
           :item-size="200"
           :buffer="200"
           v-slot="{ item }"
         >
           <DragAndDrop 
-            :item="item" 
-            :idKey="idKey" 
-            :calendar="calendar" 
-            @updateIdKey="updateIdKey" 
-            @updateRowCalendar="updateRowCalendar" 
+            :item="row({
+              arr: visits.filter(i => item.id === i.roomId),
+              idRoom: item.id,
+            })" 
+            :name="item.name"
+            @updateVisit="updateVisit"
           />
         </RecycleScroller>
       </div>
@@ -50,14 +47,17 @@
         @openDialog="dialogVisible = true" 
       />
       <Dialog
-        v-if="calendar && id" 
+        v-if="id" 
         :dialogVisible="dialogVisible" 
-        :calendar="calendar"
         :row="activeRow"
-        :idKey="idKey"
-        @updateIdKey="updateIdKey" 
-        @updateRowCalendar="updateRowCalendar"
+        :arr="row({
+          arr: visits.filter(i => activeRow === i.roomId),
+          idRoom: activeRow,
+        })"
+        :nameRoom="rooms.find(i => activeRow === i.id).name"
+        :date="mouthYear"
         @close="dialogVisible = false"
+        @addVisit="addVisit"
       />
     </div>
   </div>
@@ -65,6 +65,8 @@
 <script>
 import moment from 'moment';
 import { firestore } from '@/firebase.js'
+import { getVisitsByMouth } from '@/services/visit.js'
+import { getRooms } from '@/services/room.js'
 import { RecycleScroller } from 'vue-virtual-scroller'
 import vClickOutside from 'click-outside-vue3'
 import Dialog from "@/components/Calendar/dialog.vue"
@@ -85,93 +87,70 @@ export default {
   },
   data: () => ({
     date: new Date,
-    calendar: [],
     openModal: false,
     modalX: 0,
     modalY: 0,
     id: null,
     activeRow: null,
-    idKey: null,
     dialogVisible: false,
-    rooms: null
+    rooms: [],
+    visits: [],
   }),
   computed: {
     mouth(){
       return moment(this.date).format("MM")
+    },
+    mouthYear(){
+      return moment(this.date).format('MM/YY')
     },
     countDay() {
       return moment(this.date, "YYYY-MM").daysInMonth()
     }
   },
   methods:{
+    row({arr, idRoom}){
+      let obj = {}
+      for(let i = 0; i < arr.length; i++){
+        const item = arr[i]
+        obj[item.start] = item
+      }
+      let id = 0;
+      for(let j = 1; j < this.countDay + 1; j++){
+        id++
+        const item = obj[j]
+        if(item){
+          j = j + item.length - 1
+        }else {
+          obj[j] = {type: 'empty', day: j, id: j, roomId: idRoom}
+        }
+      }
+      return Object.values(obj);
+    },
+    updateVisit(newVisit) {
+      this.visits = [ 
+        ...this.visits.filter(item => item.id !== newVisit.id), 
+        newVisit 
+      ];
+    }, 
+    addVisit(newVisit) {
+      this.visits = [ 
+        ...this.visits, 
+        newVisit 
+      ];
+    }, 
     updateFilter({index, value}) {
       this[index] = value;
-      this.genereteArr()
-    },
-    updateIdKey(id){
-      this.idKey = id
-    },
-    async updateRowCalendar({index, items, name}){
-      if(name) {
-        this.calendar =[
-          ...this.calendar,
-          {
-            name,
-            items: [],
-            id: this.calendar.length
-          } 
-        ] 
-      }
-      const cards = {}
-      items.filter(item => item.dayStart).map(item => {
-        cards[item.dayStart] = {
-          client: item.client,
-          finish: item.dayStart + item.days - 1 
-        }
-      })
-
-      this.calendar[index].items = items
-      const tutorialsRef = await firestore.collection("calendar").doc(moment(this.date).format("MM.YY")).update({
-        [this.calendar[index].name]: {
-          days: cards 
-        }
-      });
+      this.getCalendar()
     },
     async getCalendar(){
-      const tutorialsRef = await firestore.collection("calendar").doc(moment(this.date).format("MM.YY")).get();
-      if (!tutorialsRef.exists) return null
-      return tutorialsRef.data();
+      this.getRooms()
+      this.getVisits()
     },
-    async genereteArr(){
-      this.rooms = await this.getCalendar()
-      if(!this.rooms){
-        this.calendar = []
-        return
-      }
-      const roomsKeys = Object.keys(this.rooms)
-      let id = 0;
-      let arrRooms = [];
-      for(let i = 0; i < roomsKeys.length; i++){
-        let arrDays = [];
-        let day = 1
-        for(let j = 1; j < this.countDay + 1; j++){
-          id++
-          const item = this.rooms[roomsKeys[i]].days[j]
-          if(item){
-            const dayActive = item.finish - j + 1
-            arrDays.push({id, days: dayActive, row: i, dayStart: day, client: item.client})
-            j = j + dayActive - 1
-            day = day + dayActive
-          }else {
-            arrDays.push({id, row: i, day})
-            day++
-          }
-        }
-        arrRooms.push({id: i, name: roomsKeys[i] , items: arrDays})
-        arrDays = []
-      }
-      this.calendar = arrRooms
-      this.idKey = id
+    async getRooms() {
+      this.rooms = await getRooms()
+    },
+    async getVisits() {
+      this.visits = await getVisitsByMouth({mounthYear: moment(this.date).format("MM/YY")})
     },
     click(e){
       if(e.toElement.className !== 'click-block'){
@@ -187,7 +166,7 @@ export default {
       }else{
         this.openModal = true
         this.id = id
-        this.activeRow = Number(row) + 1
+        this.activeRow = row
         this.modalX = x
         this.modalY = y
       }
@@ -200,160 +179,14 @@ export default {
       this.modalX = 0
       this.modalY = 0
     },
-
   }, 
   mounted() {
-    this.genereteArr()
+    this.getCalendar()
   }
 }
 </script>
+
 <style lang="scss">
-$colorBorder:  #DBE5EF;
-$backgroundCalendar: #F1F7FC;
+@import '@/assets/components/calendar.scss';
 
-
-
-.filter{
-  display: flex;
-  flex-direction: column;
-  margin: 20px;
-  .demo-input-label{
-    font-size: 12px;
-  }
-  .el-input{
-    width: 300px;
-  }
-  .filter-room{
-    display: flex;
-    &-input{
-      display: flex;
-      flex-direction: column;
-      margin-top: 10px;
-    }
-    .el-button{
-      max-height: 40px;
-      margin-top: auto;
-      margin-left: 10px;
-    }
-  }
-}
-.error{
-  &.el-input{
-    input{
-      border: 1px solid red;
-    }
-  }
-}
-.calendar{
-  margin: 20px;
-  display: flex;
-  overflow-y: auto;
-  max-height: 700px;
-  .el-dialog__body {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    .el-input{
-      margin: 5px 0;
-      width: 100%;
-    }
-    .demo-input-label{
-      margin-right: auto;
-    }
-  }
-  &-leftHeader{
-    width: auto;
-    height: 100%;
-    background: $backgroundCalendar;
-  }
-  .calendar-rooms{
-    max-width: calc(100% - 120px);
-    display: flex;
-    background: $backgroundCalendar;
-    &__column{
-      border-right: 1px solid $colorBorder;
-      border-left: 1px solid $colorBorder;
-      .column-header-block{
-        margin-bottom: 25px;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        height: 50px;
-        width: 200px;
-        color: #878F95;
-      }
-      .block-room{
-        position: relative;
-        cursor: pointer;
-        width: 200px;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        &.dragg-block{
-          .block-room__card{
-            border: 1px dashed #3E79B9;
-            background: #DFEDFA;
-          }
-          .block-room-content{
-            display: none;
-          }
-        }
-        &.empty-block{
-          border-top: 1px solid $colorBorder;
-          border-bottom: 1px solid $colorBorder;
-        }
-        &__card{
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          box-shadow: rgba(0, 0, 0, 0.1) 0px 4px 12px;
-          width: 100%;
-          height: calc(100% - 10px);
-          margin: 5px;
-          background: white;
-          border-radius: 5px;
-        }
-        .click-block{
-          position: absolute;
-          width: 100%;
-          height: 100%;
-          z-index: 1;
-          display: flex;
-          justify-content: center;
-          align-items: center;
-        }
-      }
-    }
-  }
-  .leftHeader-block{
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    width: 100px;
-    height: 50px;
-    color: #878F95;
-  }
-  &-modal{
-    position: fixed;
-    .el-card__body{
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      span{
-        padding: 0 0 10px 0;
-        font-size: 16px;
-        cursor: pointer;
-        font-weight: 600;
-        color: #409EFF;
-        transition: all 0.3s;
-        &:hover{
-          color:#395378;
-        }
-        &:last-child{
-          padding: 0;
-        }
-      }
-    }
-  }
-}
 </style>

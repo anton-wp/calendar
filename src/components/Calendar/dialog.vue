@@ -1,6 +1,6 @@
 <template>
   <el-dialog
-    :title="`Добавить бронирование ${calendar[row].name}`"
+    :title="`Добавить бронирование ${nameRoom}`"
     v-model="dialogVisible"
     width="30%"
   >
@@ -38,14 +38,15 @@
 <script>
 import moment from 'moment';
 import { ElDialog, ElButton, ElDatePicker } from 'element-plus'
+import { createVisit } from '@/services/visit.js'
 export default {
   components: {
     ElDialog,
     ElDatePicker,
     ElButton
   },
-  props: ["dialogVisible", "calendar", "row", "idKey"],
-  emits: ["updateRowCalendar", "close", "updateIdKey"],
+  props: ["dialogVisible", "nameRoom", "row", "arr", "date"],
+  emits: [ "close", "updateIdKey", "addVisit"],
   data: () => ({
     dateStart: null,
     dateEnd: null,
@@ -70,7 +71,7 @@ export default {
       return this.click && !this.dateEnd
     },
     dayArr() {
-      return this.calendar[this.row].items.filter(item => item.day).map(item => item.day)
+      return this.arr.map(item => item.day)
     },
     endDayArr(){
       const indexStart = this.dayArr.findIndex(item => item === Number(moment(this.dateStart).format('DD')))
@@ -95,29 +96,22 @@ export default {
       const day = Number(moment(e).format('DD'))
       return !this.endDayArr.includes(day)
     },
-    addEvent(){
+    async addEvent(){
       this.click = true;
       if(this.validClient || this.validDateStart || this.validDateEnd) return
-      const newRow = this.calendar[this.row].items
+
       const dayEnd = Number(moment(this.dateEnd).format('DD'));
       const dayStart = Number(moment(this.dateStart).format('DD'));
       const days = dayEnd - dayStart + 1
-      const newIndex = this.calendar[this.row].items.findIndex(item => item.day === dayStart);
-      this.$emit('updateRowCalendar', {
-        index: this.row,
-        items: [
-        ...newRow.slice(0, newIndex), 
-        {
-          row: this.row,
-          id: this.idKey + 1,
-          dayStart: Number(moment(this.dateStart).format('DD')),
-          days: days,
-          client: this.client
-        }, 
-        ...newRow.slice(newIndex + days)
-        ]
-      })
-      this.$emit('updateIdKey', this.idKey + 1)
+
+      const data = {
+        length: days,
+        mounthYear: this.date,
+        roomId: this.row,
+        start: Number(moment(this.dateStart).format('DD')),
+      }
+      const id = await createVisit(data)
+      this.$emit('addVisit', {...data, id })
       this.close()
     }
   }

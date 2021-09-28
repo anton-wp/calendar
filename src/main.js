@@ -1,6 +1,8 @@
 
 
 import { createApp } from 'vue'
+import axios from 'axios'
+import VueAxios from 'vue-axios'
 import App from './App.vue'
 import router from './router'
 import { dbFirebase } from "@/firebase.js"
@@ -20,6 +22,7 @@ app.use(vClickOutside)
 app.use(VueVirtualScroller)
 app.use(ElementPlus)
 app.use(store)
+app.use(VueAxios, axios)
 
 
 dbFirebase.auth().onAuthStateChanged(user => {

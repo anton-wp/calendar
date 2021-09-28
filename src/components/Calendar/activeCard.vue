@@ -1,8 +1,8 @@
 <template>
-  <div class="block-room" :style="`height: ${element.days * 50}px`">
+  <div class="block-room" :style="`height: ${element.length * 50}px`">
     <div class="block-room__card" :style="`border-top: 5px solid ${color}`">
       <div class="block-room-content">
-        {{element.days + ' ' + element.client}}
+        {{element.length + ' ' + element.client}}
       </div>
     </div>
   </div>
