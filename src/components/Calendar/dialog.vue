@@ -1,6 +1,6 @@
 <template>
   <el-dialog
-    :title="`Добавить бронирование ${nameRoom}`"
+    :title="`Добавить бронирование ${room ? room.name : ''}`"
     v-model="dialogVisible"
     width="30%"
   >
@@ -45,7 +45,7 @@ export default {
     ElDatePicker,
     ElButton
   },
-  props: ["dialogVisible", "nameRoom", "row", "arr", "date"],
+  props: ["dialogVisible", "room", "row", "arr", "date"],
   emits: [ "close", "updateIdKey", "addVisit"],
   data: () => ({
     dateStart: null,
@@ -105,13 +105,14 @@ export default {
       const days = dayEnd - dayStart + 1
 
       const data = {
+        name: this.client,
         length: days,
         mounthYear: this.date,
         roomId: this.row,
         start: Number(moment(this.dateStart).format('DD')),
       }
       const id = await createVisit(data)
-      this.$emit('addVisit', {...data, id })
+      this.$emit('addVisit')
       this.close()
     }
   }

@@ -1,6 +1,6 @@
 <template>
   <div class="block-room empty-block" :style="`height: 48px`">
-    <div class="click-block"><div :id="element.id" :data-row="element.idRoom"></div></div>
+    <div class="click-block"><div :id="element.id" :data-row="element.roomId"></div></div>
     <el-icon>
       <plus />
     </el-icon>

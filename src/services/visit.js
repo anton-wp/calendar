@@ -1,20 +1,19 @@
 import { firestore } from '@/firebase.js'
 
-export const createVisit = async ({length, mounthYear, roomId, start }) => {
+export const createVisit = async ({length, mounthYear, roomId, start, name }) => {
   const res = await firestore.collection('visits').add({
     length,
     mounthYear,
     roomId,
     start,
+    name
   })
   return res.id
 }
-export const updateVisit = async ({id, roomId, start, mounthYear, length }) => {
-  const res = await firestore.collection('visits').doc(id).set({
-    length,
-    mounthYear,
+export const updateVisit = async ({ id, roomId, start }) => {
+  const res = await firestore.collection('visits').doc(id).update({
     roomId,
-    start,
+    start
   })
 }
 export const getVisitsByMouth = async ({ mounthYear }) => {

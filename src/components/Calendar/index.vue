@@ -2,7 +2,7 @@
   <div>
     <Filter 
       @updateFilter="updateFilter" 
-      @getRooms="getRooms"
+      @getRooms="updateRooms"
     /> 
     <div class="calendar" @scroll="closeModal()">
       <div class="calendar-leftHeader">
@@ -31,10 +31,7 @@
           v-slot="{ item }"
         >
           <DragAndDrop 
-            :item="row({
-              arr: visits.filter(i => item.id === i.roomId),
-              idRoom: item.id,
-            })" 
+            :item="visits[item.id]" 
             :name="item.name"
             @updateVisit="updateVisit"
           />
@@ -54,10 +51,10 @@
           arr: visits.filter(i => activeRow === i.roomId),
           idRoom: activeRow,
         })"
-        :nameRoom="rooms.find(i => activeRow === i.id).name"
+        :room="roomOpen"
         :date="mouthYear"
         @close="dialogVisible = false"
-        @addVisit="addVisit"
+        @addVisit="updateVisit"
       />
     </div>
   </div>
@@ -95,8 +92,12 @@ export default {
     dialogVisible: false,
     rooms: [],
     visits: [],
+    visitsFb: [],
   }),
   computed: {
+    roomOpen(){
+      return this.rooms.find(i => this.activeRow === i.id)
+    },
     mouth(){
       return moment(this.date).format("MM")
     },
@@ -126,31 +127,38 @@ export default {
       }
       return Object.values(obj);
     },
-    updateVisit(newVisit) {
-      this.visits = [ 
-        ...this.visits.filter(item => item.id !== newVisit.id), 
-        newVisit 
-      ];
+    createVisits(){
+      this.rooms.map(row => {
+        this.visits[row.id] = this.row({arr: this.visitsFb.filter(i => i.roomId === row.id), idRoom: row.id})
+      })
+    },
+    updateVisit() {
+      this.getVisits()
     }, 
-    addVisit(newVisit) {
-      this.visits = [ 
-        ...this.visits, 
-        newVisit 
-      ];
+    async updateRooms() {
+      await this.getRooms()
+      this.createVisits()
     }, 
+    // addVisit(newVisit) {
+    //   this.visits = [ 
+    //     ...this.visits, 
+    //     newVisit 
+    //   ];
+    // }, 
     updateFilter({index, value}) {
       this[index] = value;
       this.getCalendar()
     },
     async getCalendar(){
-      this.getRooms()
-      this.getVisits()
+      await this.getRooms()
+      await this.getVisits()
     },
     async getRooms() {
       this.rooms = await getRooms()
     },
     async getVisits() {
-      this.visits = await getVisitsByMouth({mounthYear: moment(this.date).format("MM/YY")})
+      this.visitsFb = await getVisitsByMouth({mounthYear: moment(this.date).format("MM/YY")})
+      this.createVisits()
     },
     click(e){
       if(e.toElement.className !== 'click-block'){
@@ -160,13 +168,13 @@ export default {
       const row = e.toElement.children[0].dataset.row
       const id = e.toElement.children[0].id
       const x = e.toElement.children[0].getBoundingClientRect().x
-      const y = e.toElement.children[0].getBoundingClientRect().y
+      const y = e.toElement.children[0].getBoundingClientRect().y 
+      this.activeRow = row
+      this.id = id
       if(id === this.id && this.openModal){
         this.closeModal()
       }else{
         this.openModal = true
-        this.id = id
-        this.activeRow = row
         this.modalX = x
         this.modalY = y
       }
